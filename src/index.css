@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-whatsapp-teal: #075E54;
+  --color-whatsapp-green: #25D366;
+  --color-whatsapp-light: #dcf8c6;
+  --color-whatsapp-bg: #ece5dd;
+  --color-whatsapp-dark-bg: #0b141a;
+  --color-whatsapp-dark-bubble: #202c33;
+}
+
+@layer base {
+  body {
+    @apply transition-colors duration-300;
+  }
+}
+
+.whatsapp-bg {
+  background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+  background-repeat: repeat;
+  background-size: 400px;
+}
+
+.dark .whatsapp-bg {
+  filter: invert(100%) opacity(0.05);
+}
+
+.chat-bubble-right {
+  @apply bg-whatsapp-light dark:bg-[#005c4b] rounded-lg rounded-tr-none px-3 py-1.5 shadow-sm relative max-w-[85%];
+}
+
+.chat-bubble-left {
+  @apply bg-white dark:bg-whatsapp-dark-bubble rounded-lg rounded-tl-none px-3 py-1.5 shadow-sm relative max-w-[85%];
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+.canvas-container {
+  touch-action: none;
+}
+
