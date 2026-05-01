@@ -1,6 +1,6 @@
 {
   "name": "Zoya AI",
-  "description": "A WhatsApp-style AI chat application with study modes, exam quizzes, and a drawing canvas.",
+  "description": "Zoya AI: Your personal learning companion. Created by Shalu Yadav.",
   "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": []
 }

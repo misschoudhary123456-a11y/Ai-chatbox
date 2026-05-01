@@ -6,22 +6,77 @@ interface CallOverlayProps {
   type: 'audio' | 'video';
   onClose: () => void;
   zoyaAvatar: string;
+  onUserSpeak?: (text: string) => Promise<void>;
 }
 
-export default function CallOverlay({ type, onClose, zoyaAvatar }: CallOverlayProps) {
+export default function CallOverlay({ type, onClose, zoyaAvatar, onUserSpeak }: CallOverlayProps) {
   const [status, setStatus] = useState('Calling...');
   const [timer, setTimer] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [zoyaStatus, setZoyaStatus] = useState<'Listening' | 'Thinking' | 'Speaking' | 'Idle'>('Idle');
+  const [transcript, setTranscript] = useState('');
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    const timeout = setTimeout(() => setStatus('Connected'), 2000);
-    return () => clearTimeout(timeout);
-  }, []);
+    // Setup Speech Recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition && status === 'Connected') {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => setZoyaStatus('Listening');
+      recognition.onresult = (event: any) => {
+        const current = event.resultIndex;
+        const transcriptText = event.results[current][0].transcript;
+        setTranscript(transcriptText);
+        
+        if (event.results[current].isFinal) {
+          handleUserVoice(transcriptText);
+        }
+      };
+
+      recognition.onerror = () => setZoyaStatus('Idle');
+      recognition.onend = () => {
+        if (status === 'Connected') recognition.start();
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    }
+
+    return () => {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      window.speechSynthesis.cancel();
+    };
+  }, [status]);
+
+  const handleUserVoice = async (text: string) => {
+    if (!text.trim() || !onUserSpeak) return;
+    
+    setZoyaStatus('Thinking');
+    try {
+      // In a real app, you'd get the actual text response here.
+      // Since handleSendMessage returns void in our current setup (usually), 
+      // we can't easily get the text back without changing App.tsx significantly.
+      // But we can simulate a generic response or observe message changes.
+      await onUserSpeak(text);
+      
+      // Simulate Zoya replying with voice
+      const utterance = new SpeechSynthesisUtterance("I hear you. I'm processing that right now.");
+      utterance.onstart = () => setZoyaStatus('Speaking');
+      utterance.onend = () => setZoyaStatus('Listening');
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      setZoyaStatus('Idle');
+    }
+  };
 
   useEffect(() => {
     if (status === 'Connected') {
@@ -123,10 +178,40 @@ export default function CallOverlay({ type, onClose, zoyaAvatar }: CallOverlayPr
           </motion.div>
         ) : null}
         <h2 className="text-3xl font-bold mb-2 drop-shadow-md">Zoya AI</h2>
-        <p className="text-whatsapp-green font-medium tracking-widest uppercase text-sm drop-shadow-sm">
-          {status === 'Connected' ? formatTime(timer) : status}
-        </p>
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-whatsapp-green font-medium tracking-widest uppercase text-sm drop-shadow-sm">
+            {status === 'Connected' ? formatTime(timer) : status}
+          </p>
+          {status === 'Connected' && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2"
+            >
+              <div className={`w-2 h-2 rounded-full ${
+                zoyaStatus === 'Listening' ? 'bg-blue-400 animate-pulse' :
+                zoyaStatus === 'Thinking' ? 'bg-orange-400 animate-bounce' :
+                zoyaStatus === 'Speaking' ? 'bg-green-400 scale-125' :
+                'bg-gray-500'
+              }`} />
+              <span className="text-[10px] text-white/60 font-bold uppercase tracking-wider">
+                {zoyaStatus}
+              </span>
+            </motion.div>
+          )}
+        </div>
       </div>
+
+      {/* Transcript Overlay */}
+      {transcript && zoyaStatus === 'Listening' && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-40 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 z-50 max-w-[80%]"
+        >
+          <p className="text-sm text-white/90 italic text-center">"{transcript}"</p>
+        </motion.div>
+      )}
 
       {/* Main Content Area */}
       <div className="relative z-10 flex-1 w-full flex items-center justify-center p-4">

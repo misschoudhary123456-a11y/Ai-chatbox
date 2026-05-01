@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Send, Image as ImageIcon, File, Mic, Smile, MoreVertical, 
   Search, Phone, Video, Paperclip, ChevronLeft, Volume2, VolumeX,
-  X, PenTool, Sparkles, GraduationCap, HelpCircle
+  X, PenTool, Sparkles, GraduationCap, HelpCircle, Share2, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -164,10 +164,19 @@ export default function App() {
       }
 
     } catch (error: any) {
+      let friendlyError = error.message || "Something went wrong. Please check your network.";
+      const errorStr = JSON.stringify(error).toLowerCase();
+      
+      if (errorStr.includes("429") || errorStr.includes("quota") || errorStr.includes("exhausted")) {
+        friendlyError = "Limit reached! Zoya is taking a short break. Please wait a minute and try again. (Quota Exceeded)";
+      } else if (errorStr.includes("api_key") && (errorStr.includes("not found") || errorStr.includes("invalid"))) {
+        friendlyError = "API Configuration error. Zoya needs a valid API key to work!";
+      }
+
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `**Error:** ${error.message || "Something went wrong. Please check your API key."}`,
+        content: `**Error:** ${friendlyError}`,
         timestamp: new Date().toISOString()
       };
       setState(prev => ({ ...prev, messages: [...prev.messages, errorMsg], isTyping: false }));
@@ -439,6 +448,40 @@ export default function App() {
               title="Help & Guide"
             >
               <HelpCircle size={20}/>
+            </button>
+            <button 
+              className="hover:text-whatsapp-teal transition-colors active:scale-95"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Zoya AI',
+                    text: 'Check out Zoya AI - My personal learning companion!',
+                    url: window.location.href,
+                  });
+                } else {
+                  alert("Sharing not supported on this browser. Copy the URL to share!");
+                }
+              }}
+              title="Share App"
+            >
+              <Share2 size={20}/>
+            </button>
+            <button 
+              className="hover:text-whatsapp-teal transition-colors active:scale-95"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Zoya AI',
+                    text: 'Check out Zoya AI - My personal learning companion!',
+                    url: window.location.href,
+                  }).catch(console.error);
+                } else {
+                  prompt("Copy this link to share with friends:", window.location.href);
+                }
+              }}
+              title="Share App"
+            >
+              <Share2 size={20}/>
             </button>
             <button 
               className="hover:text-whatsapp-teal transition-colors active:scale-95"
@@ -755,6 +798,10 @@ export default function App() {
             type={activeCall} 
             onClose={() => setActiveCall(null)} 
             zoyaAvatar={state.zoyaAvatar}
+            onUserSpeak={async (text) => {
+              // Simulating Zoya hearing and responding
+              await handleSendMessage(`[Voice Call Input]: ${text}`);
+            }}
           />
         )}
       </AnimatePresence>
@@ -789,6 +836,9 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      <div className="fixed bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 font-medium opacity-50 pointer-events-none uppercase tracking-widest whitespace-nowrap z-50">
+        Owner: Shalu Yadav • Zoya AI Powered
+      </div>
     </div>
   );
 }
